@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#10151b">
+  <meta name="description" content="경비를 피하고 열쇠를 찾아 감옥을 탈출하세요! 브라우저에서 즐기는 픽셀 아트 잠입 게임.">
+  <title>탈옥: 마지막 야간 점호</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+    :root { color-scheme: dark; --ink: #e9e5da; --muted: #91999c; --lime: #c2ed72; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 50% 42%, #27343a 0, #141b20 55%, #0b1014 100%); color: var(--ink); font-family: 'Noto Sans KR', sans-serif; display: grid; place-items: center; padding: 24px; }
+    .shell { width: min(100%, 1050px); }
+    .topline { display:flex; align-items:center; justify-content:space-between; margin: 0 2px 12px; color:#9ba6a6; font: 11px 'IBM Plex Mono',monospace; letter-spacing:.13em; text-transform:uppercase; }
+    .brand { color:var(--lime); font-weight:700; }
+    .game-frame { position:relative; overflow:hidden; border:1px solid #63706c; border-radius:8px; background:#151c20; box-shadow:0 22px 75px #0009, 0 0 0 5px #11171b; }
+    canvas { width:100%; height:auto; display:block; image-rendering:pixelated; touch-action:none; }
+    .overlay { position:absolute; inset:0; display:grid; place-items:center; padding:22px; background:linear-gradient(90deg,#10171be8,#10171bc9 55%,#10171bd9); text-align:center; transition:opacity .22s ease; }
+    .overlay.hidden { opacity:0; pointer-events:none; }
+    .card { width:min(100%,440px); padding:27px 26px 23px; border:1px solid #61716c; border-radius:7px; background:#182126ed; box-shadow:0 16px 55px #0008; }
+    .eyebrow { color:var(--lime); font:600 11px 'IBM Plex Mono',monospace; letter-spacing:.2em; }
+    h1 { margin:10px 0 9px; color:#f4f0e5; font:normal clamp(34px,7vw,53px)/1.07 'Black Han Sans',sans-serif; letter-spacing:.015em; }
+    .subtitle { margin:0 auto 19px; max-width:330px; color:#aab2ae; font-size:13px; line-height:1.8; }
+    .mission { margin:17px 0; padding:11px; border-block:1px solid #ffffff17; color:#cbd2cb; font-size:12px; line-height:1.8; }
+    .mission b { color:#e5d28a; }
+    button { border:0; border-radius:4px; background:var(--lime); padding:12px 28px; color:#172019; font:800 14px 'Noto Sans KR',sans-serif; cursor:pointer; transition:transform .15s,background .15s; }
+    button:hover { background:#d5f59b; transform:translateY(-1px); }
+    .hint { margin-top:13px; color:#7e8b8a; font-size:10px; }
+    .bottomline { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:14px 2px 0; color:#9ba6a6; font-size:11px; }
+    .keys { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    kbd { min-width:22px; padding:3px 6px; border:1px solid #47524f; border-radius:3px; background:#1b2428; color:#d3d8cf; text-align:center; font:10px 'IBM Plex Mono',monospace; }
+    .credit { color:#707d7b; text-align:right; }
+    .mobile-controls { display:none; justify-content:space-between; margin-top:12px; user-select:none; }
+    .pad { display:flex; gap:8px; }
+    .mobile-controls button { width:54px; height:46px; padding:0; background:#283438; color:#ecf0e6; border:1px solid #53615d; touch-action:none; }
+    .mobile-controls button:active { background:#64735e; }
+    @media(max-width:650px) { body{padding:12px}.topline{font-size:9px}.bottomline{font-size:10px}.credit{display:none}.mobile-controls{display:flex}.card{padding:22px 17px}.overlay{padding:12px} }
+    @media(max-height:620px) and (min-width:651px) { body{padding:10px}.shell{width:min(100%,900px)}.bottomline{margin-top:8px} }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topline"><span class="brand">NIGHT SHIFT // 02:17 AM</span><span>작전명: 담장 너머</span></div>
+    <section class="game-frame" aria-label="감옥 탈출 게임">
+      <canvas id="game" width="960" height="540" aria-label="감옥 탈출 게임 화면"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <div class="eyebrow" id="eyebrow">한밤중의 탈옥 작전</div>
+          <h1 id="headline">탈옥</h1>
+          <p class="subtitle" id="subtitle">마지막 야간 점호가 시작됐다.<br>경비의 눈을 피해 자유를 되찾아라.</p>
+          <div class="mission" id="mission"><b>작전 목표</b><br>숨겨둔 열쇠를 찾고, 경비를 피해 출구에 도달하세요.</div>
+          <button id="start">작전 시작</button>
+          <div class="hint">소리 없이 움직여라. 들키면 처음부터 다시.</div>
+        </div>
+      </div>
+    </section>
+    <div class="bottomline">
+      <div class="keys"><span>이동</span><kbd>A</kbd><kbd>D</kbd><span>/</span><kbd>←</kbd><kbd>→</kbd><span>점프</span><kbd>W</kbd><kbd>↑</kbd><kbd>SPACE</kbd><span>재시작</span><kbd>R</kbd></div>
+      <div class="credit">KEY를 확보하고 EXIT로 탈출하세요 · © 2026</div>
+    </div>
+    <div class="mobile-controls" aria-label="터치 조작">
+      <div class="pad"><button data-key="ArrowLeft" aria-label="왼쪽">◀</button><button data-key="ArrowRight" aria-label="오른쪽">▶</button></div>
+      <div class="pad"><button data-key="Space" aria-label="점프">점프</button></div>
+    </div>
+  </main>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.querySelector('#game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.querySelector('#overlay');
+  const startButton = document.querySelector('#start');
+  const W = canvas.width, H = canvas.height, WORLD = 2220;
+  const keys = new Set();
+  const platforms = [
+    {x:0,y:466,w:510,h:74},{x:590,y:466,w:500,h:74},{x:1170,y:466,w:1050,h:74},
+    {x:220,y:382,w:125,h:16},{x:400,y:318,w:145,h:16},{x:690,y:387,w:130,h:16},
+    {x:870,y:323,w:150,h:16},{x:1115,y:379,w:128,h:16},{x:1370,y:350,w:142,h:16},
+    {x:1585,y:294,w:154,h:16},{x:1840,y:366,w:155,h:16}
+  ];
+  const pits = [{x:510,w:80},{x:1090,w:80}];
+  const guardsSeed = [
+    {x:365,min:350,max:485,speed:50,dir:1}, {x:790,min:720,max:1040,speed:60,dir:-1},
+    {x:1330,min:1290,max:1550,speed:54,dir:1}, {x:1790,min:1760,max:2100,speed:64,dir:-1}
+  ];
+  let player, guards, camera=0, state='title', last=0, elapsed=0, alert=0, particles=[], keyTaken=false;
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  function reset() {
+    player={x:70,y:416,w:25,h:49,vx:0,vy:0,onGround:false,face:1,step:0};
+    guards=guardsSeed.map(g=>({...g,x:g.x,base:g.x,y:416,w:28,h:50}));
+    camera=0; elapsed=0; alert=0; particles=[]; keyTaken=false;
+  }
+  reset();
+  function start(){ reset(); state='play'; overlay.classList.add('hidden'); last=performance.now(); }
+  startButton.addEventListener('click',start);
+  window.addEventListener('keydown',e=>{
+    if(['ArrowLeft','ArrowRight','ArrowUp','Space'].includes(e.code))e.preventDefault();
+    keys.add(e.code);
+    if((e.code==='Enter'||e.code==='Space')&&state!=='play')start();
+    if(e.code==='KeyR'&&state==='play')start();
+  });
+  window.addEventListener('keyup',e=>keys.delete(e.code));
+  document.querySelectorAll('.mobile-controls button').forEach(button=>{
+    const code=button.dataset.key;
+    button.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(code);button.setPointerCapture(e.pointerId)});
+    ['pointerup','pointercancel','lostpointercapture'].forEach(type=>button.addEventListener(type,()=>keys.delete(code)));
+  });
+  function boxHits(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+  function update(dt){
+    if(state!=='play')return;
+    elapsed+=dt;
+    const left=keys.has('ArrowLeft')||keys.has('KeyA'), right=keys.has('ArrowRight')||keys.has('KeyD');
+    const jump=keys.has('ArrowUp')||keys.has('KeyW')||keys.has('Space');
+    const speed=178;
+    player.vx=(right?1:0)-(left?1:0); player.vx*=speed;
+    if(player.vx)player.face=Math.sign(player.vx);
+    player.x=Math.max(0,Math.min(WORLD-player.w,player.x+player.vx*dt));
+    if(jump&&player.onGround){player.vy=-438;player.onGround=false;}
+    player.vy=Math.min(700,player.vy+1110*dt);
+    let oldBottom=player.y+player.h;
+    player.y+=player.vy*dt; player.onGround=false;
+    if(player.vy>=0){
+      for(const p of platforms){
+        const overlap=player.x+player.w>p.x&&player.x<p.x+p.w;
+        if(overlap&&oldBottom<=p.y+3&&player.y+player.h>=p.y){player.y=p.y-player.h;player.vy=0;player.onGround=true;break;}
+      }
+    }
+    if(player.y>H+35){fail('바닥 아래로 떨어졌습니다.');return;}
+    if(player.vx&&player.onGround)player.step+=dt*12;
+    const key={x:965,y:288,w:23,h:23};
+    if(!keyTaken&&boxHits(player,key)){keyTaken=true;for(let i=0;i<14;i++)particles.push({x:key.x+11,y:key.y+10,vx:rand(-70,70),vy:rand(-120,30),life:rand(.35,.8),color:'#f2d66f'});}
+    for(const g of guards){
+      g.x+=g.speed*g.dir*dt;
+      if(g.x<g.min||g.x>g.max){g.dir*=-1;g.x=Math.max(g.min,Math.min(g.max,g.x));}
+      g.y=416;
+      const dx=Math.abs((player.x+player.w/2)-(g.x+g.w/2));
+      const sameLevel=Math.abs((player.y+player.h)-(g.y+g.h))<35;
+      if(dx<49&&sameLevel){ fail('경비에게 발각됐습니다.');return; }
+    }
+    for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=240*dt;p.life-=dt;}
+    particles=particles.filter(p=>p.life>0);
+    camera=Math.max(0,Math.min(WORLD-W,player.x-W*.38));
+    if(player.x>2070){ if(keyTaken)win(); else {alert=1;} }
+  }
+  function fail(message){state='over';showOverlay('작전 실패',message,'경비의 손길을 피해 다시 시도하세요.','다시 시도');}
+  function win(){state='win';showOverlay('탈출 성공!',`탈출 시간 ${formatTime(elapsed)}`,'철문 너머로 새벽 공기가 밀려온다. 당신은 자유다.','한 번 더 플레이');}
+  function formatTime(t){const m=Math.floor(t/60),s=Math.floor(t%60);return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+  function showOverlay(title,sub,mission,button){
+    document.querySelector('#eyebrow').textContent=state==='win'?'MISSION COMPLETE // 자유를 향해':'MISSION FAILED // 다시 잠입';
+    document.querySelector('#headline').textContent=title;
+    document.querySelector('#subtitle').textContent=sub;
+    document.querySelector('#mission').textContent=mission;
+    startButton.textContent=button;overlay.classList.remove('hidden');
+  }
+  function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+  function line(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#1d2b31');grad.addColorStop(.7,'#34413e');grad.addColorStop(1,'#202a2b');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+    for(let i=0;i<70;i++){const wx=(i*173+37)%WORLD, x=wx-camera*.24;if(x>-10&&x<W+10){const y=34+(i*47)%250;rect(x,y,2,2,i%4===0?'#d9d49a55':'#b8d0c433');}}
+    const glow=ctx.createRadialGradient(720,94,3,720,94,185);glow.addColorStop(0,'#d7d5a022');glow.addColorStop(1,'#d7d5a000');ctx.fillStyle=glow;ctx.fillRect(520,0,400,280);
+    ctx.save();ctx.translate(-camera*.48,0);
+    rect(0,204,WORLD,263,'#46504a');rect(0,202,WORLD,8,'#71746a');
+    for(let x=0;x<WORLD;x+=86){line(x,214,x,461,'#252f30',2);for(let y=220;y<460;y+=44)line(x,y,x+82,y,'#535950',1);}
+    for(let x=100;x<WORLD;x+=290){rect(x,247,75,92,'#192327');rect(x+5,252,65,82,'#263336');for(let b=0;b<5;b++)rect(x+9+b*14,249,4,94,'#7a8074');rect(x+32,239,11,8,'#c4c08b');}
+    for(const x of [60,740,1450,2040]){rect(x,79,5,126,'#263336');rect(x-25,75,55,8,'#263336');rect(x-14,56,34,21,'#202b30');rect(x-8,61,20,9,'#bfbd8355');}
+    ctx.restore();
+    rect(0,466,W,74,'#151b1d');
+    for(const pit of pits){let x=pit.x-camera;if(x>-90&&x<W){rect(x,463,pit.w,77,'#101416');for(let k=0;k<5;k++)line(x+k*20,475,x+k*20-13,510,'#8a51414a',2);}}
+    for(const p of platforms){const x=p.x-camera;if(x+p.w<0||x>W)continue;rect(x,p.y,p.w,p.h,'#60675b');rect(x,p.y,p.w,5,'#a2a087');rect(x,p.y+5,p.w,p.h-5,'#454e48');for(let i=0;i<p.w;i+=39){line(x+i,p.y+9,x+i-7,p.y+p.h,'#38413c',1);rect(x+i+8,p.y+18,3,2,'#99967b');}}
+    for(let x=0;x<W;x+=31){rect(x,25,2,42,'#707771');line(x-5,31,x+8,40,'#949991',1);line(x+7,31,x-5,40,'#949991',1);}
+    for(let i=0;i<8;i++){const x=100+i*278-camera;if(x<-70||x>W+40)continue;rect(x,367,48,99,'#252f30');rect(x+4,371,40,95,'#38403d');for(let b=0;b<5;b++)rect(x+8+b*7,372,3,65,'#818477');rect(x+12,444,25,6,'#252e30');}
+    const ex=2110-camera;rect(ex,357,74,109,'#252d2c');rect(ex+9,367,56,99,keyTaken?'#99a46c':'#6d493e');rect(ex+16,376,42,90,keyTaken?'#627653':'#543b35');for(let y=382;y<462;y+=17)line(ex+16,y,ex+57,y,'#252e2a',2);rect(ex+34,416,4,5,'#e7cf7d');rect(ex+25,344,22,8,keyTaken?'#c2ed72':'#d97458');
+    ctx.fillStyle=keyTaken?'#d4ed99':'#e39a63';ctx.font='bold 11px monospace';ctx.fillText(keyTaken?'OPEN':'LOCKED',ex+(keyTaken?18:7),334);
+    if(!keyTaken){const kx=965-camera,ky=284;ctx.save();ctx.translate(kx+11,ky+10);ctx.rotate(Math.sin(elapsed*4)*.12);ctx.strokeStyle='#f1d46c';ctx.lineWidth=4;ctx.beginPath();ctx.arc(-4,-2,6,0,Math.PI*2);ctx.moveTo(2,1);ctx.lineTo(13,12);ctx.lineTo(10,15);ctx.moveTo(7,7);ctx.lineTo(4,10);ctx.stroke();ctx.restore();}
+    for(const g of guards)drawGuard(g.x-camera,g.y,g.dir,elapsed);
+    drawPlayer(player.x-camera,player.y,player.face,player.step);
+    for(const p of particles){ctx.globalAlpha=Math.max(0,p.life);rect(p.x-camera,p.y,4,4,p.color);}ctx.globalAlpha=1;
+    rect(15,14,222,57,'#101719d9');rect(15,14,3,57,'#c2ed72');ctx.fillStyle='#aab4ad';ctx.font='600 10px "IBM Plex Mono",monospace';ctx.fillText('OBJECTIVE',29,32);ctx.fillStyle=keyTaken?'#c2ed72':'#e8d68c';ctx.font='700 13px "Noto Sans KR",sans-serif';ctx.fillText(keyTaken?'열쇠 확보  →  출구로!':'열쇠를 찾아라',29,55);
+    rect(W-112,14,97,34,'#101719d9');ctx.fillStyle='#d8ded1';ctx.font='600 13px "IBM Plex Mono",monospace';ctx.fillText(formatTime(elapsed),W-91,36);
+    if(alert>0){ctx.globalAlpha=Math.min(1,alert);ctx.fillStyle='#ffd08b';ctx.font='bold 13px "Noto Sans KR",sans-serif';ctx.textAlign='center';ctx.fillText(keyTaken?'출구로 가는 중!':'열쇠가 필요하다!',W/2,110);ctx.textAlign='left';ctx.globalAlpha=1;alert=Math.max(0,alert-.025);}
+    const vig=ctx.createRadialGradient(W/2,H/2,180,W/2,H/2,610);vig.addColorStop(0,'#0000');vig.addColorStop(1,'#060b10a8');ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+  }
+  function drawPlayer(x,y,face,step){
+    ctx.save();ctx.translate(Math.round(x),Math.round(y));const stride=Math.sin(step)*3;
+    ctx.fillStyle='#1118';ctx.beginPath();ctx.ellipse(13,49,15,3,0,0,Math.PI*2);ctx.fill();
+    rect(5,35,7,11+stride,'#353d39');rect(14,35,7,11-stride,'#353d39');rect(3,44+stride,10,4,'#202729');rect(13,44-stride,10,4,'#202729');
+    rect(4,17,18,20,'#68725d');rect(2,20,5,16,'#505a4c');rect(20,21,5,13,'#505a4c');rect(7,23,12,3,'#9a8c62');rect(5,3,17,15,'#c28d68');rect(4,1,19,7,'#292c29');rect(4,6,4,5,'#292c29');rect(face>0?16:7,9,3,2,'#1a2020');rect(17,27,3,4,'#d4c57b');ctx.restore();
+  }
+  function drawGuard(x,y,dir,t){
+    ctx.save();ctx.translate(Math.round(x),Math.round(y));const bob=Math.sin(t*5+x*.03)*1.2;
+    rect(4,35+bob,8,12,'#303942');rect(16,35-bob,8,12,'#303942');rect(2,45+bob,11,4,'#1c252a');rect(14,45-bob,12,4,'#1c252a');rect(3,15,23,22,'#455769');rect(1,20,5,17,'#354553');rect(23,19,5,18,'#354553');rect(3,12,23,6,'#202a32');rect(8,3,14,12,'#b58d72');rect(7,1,16,5,'#242b32');rect(10,5,9,3,'#cbd8ce');rect(dir>0?17:9,8,3,2,'#b83f37');
+    ctx.globalAlpha=.07;ctx.fillStyle='#f6e5a3';ctx.beginPath();ctx.moveTo(dir>0?28:1,25);ctx.lineTo(dir>0?130:-100,3);ctx.lineTo(dir>0?130:-100,67);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  function loop(now){const dt=Math.min((now-last)/1000||0,.035);last=now;update(dt);draw();requestAnimationFrame(loop);}
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
